@@ -54,6 +54,14 @@ public class EvaluateTopics {
         (EvaluateTopics.class, "random-seed", "INTEGER", true, 0,
          "The random seed for the Gibbs sampler.  Default is 0, which will use the clock.", null);
 
+    static CommandOption.Double predictRatio = new CommandOption.Double(
+        EvaluateTopics.class, "predict-ratio", "DOUBLE", true, 0.8,
+        "The percentage of document seen to predict. Default is 0.8.", null);
+
+    static CommandOption.String evalMethod = new CommandOption.String(
+        EvaluateTopics.class, "eval-method", "LR|PRED", true, "LR",
+        "The evaluation method to use: LR as left-to-right, PRED as predction.", null);
+
 	public static void main (String[] args) {
 
         // Process the command-line options
@@ -70,6 +78,8 @@ public class EvaluateTopics {
 			System.err.println("You must specify a serialized instance list. Use --help to list options.");
 			System.exit(0);
 		}
+
+    System.out.println("Evaluating topic model using " + evaluatorFilename.value());
 
 		try {
 			
@@ -89,11 +99,24 @@ public class EvaluateTopics {
 
 			InstanceList instances = InstanceList.load (new File(inputFile.value));
 
-			outputStream.println(evaluator.evaluateLeftToRight(instances, numParticles.value, 
-															   usingResampling.value,
-															   docProbabilityStream));
-			
-
+      if ("LR".equals(evalMethod.value())) {
+        System.out.println("Using left-to-right evaluation method...");
+        outputStream.println(evaluator.evaluateLeftToRight(instances, numParticles.value,
+                                   usingResampling.value,
+                                   docProbabilityStream));
+      } else if ("PRED".equals(evalMethod.value())) {
+        System.out.println("Using prediction evaluation method...");
+        outputStream.println(
+            evaluator.evaluatePrediction(
+                instances,
+                predictRatio.value(),
+                numParticles.value(),
+                numIterations.value(),
+                docProbabilityStream));
+      } else {
+        System.err.println("Evaluation method isn't supported!");
+        System.exit(1);
+      }
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.err.println(e.getMessage());
